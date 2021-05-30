@@ -3,7 +3,7 @@
 """
 @author : Romain Graux
 @date : 2021 May 30, 00:01:28
-@last modified : 2021 May 30, 02:01:48
+@last modified : 2021 May 30, 11:01:05
 """
 
 import tensorflow as tf
@@ -14,7 +14,7 @@ class AttrDict(dict):
     __getattr__ = dict.__getitem__
 
 
-def plot_grid_ds(ds, model=None, size=(3, 3)):
+def plot_grid_ds(ds, model=None, size=(3, 3), figsize=(10, 10)):
     from copy import copy
     import matplotlib.pyplot as plt
     from mpl_toolkits.axes_grid1 import ImageGrid
@@ -22,7 +22,7 @@ def plot_grid_ds(ds, model=None, size=(3, 3)):
     n = size[0] * size[1]
     ds_ = copy(ds)
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=figsize)
     grid = ImageGrid(
         fig,
         111,
@@ -32,7 +32,11 @@ def plot_grid_ds(ds, model=None, size=(3, 3)):
     for X_batch, y_batch in ds_.unbatch().shuffle(n).batch(n).take(1):
         y_hat_batch = model.predict(X_batch).argmax(axis=-1) if model else y_batch
         for X, y, y_hat, ax in zip(X_batch, y_batch, y_hat_batch, grid):
-            title = f"{y} (true) - {y_hat} (pred)" if model else f"{y}"
+            title = (
+                f"{ds.class_names[y]} (true) - {ds.class_names[y_hat]} (pred)"
+                if model
+                else f"{ds.class_names[y]}"
+            )
             ax.set_title(title)
             ax.axes.xaxis.set_visible(False)
             ax.axes.yaxis.set_visible(False)
