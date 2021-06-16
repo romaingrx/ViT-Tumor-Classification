@@ -18,9 +18,20 @@ def plot_grid_ds(ds, model=None, size=(3, 3), figsize=(10, 10)):
     from copy import copy
     import matplotlib.pyplot as plt
     from mpl_toolkits.axes_grid1 import ImageGrid
-
-    n = size[0] * size[1]
+    
     ds_ = copy(ds)
+    n = size[0] * size[1]
+    
+    if isinstance(ds_, tf.keras.preprocessing.image.DirectoryIterator):
+        class_names = list(ds.class_indices.keys())
+        iterator = list(next(ds_))
+        iterator = tuple([i[:n] for i in iterator])
+        X_batch, y_batch = iterator
+        y_batch = y_batch.astype(int)
+    else:
+        class_names = ds_.class_names
+        iterator = ds_.unbatch().shuffle(n).batch(n).take(1)
+        X_batch, y_batch = next(iterator)
 
     fig = plt.figure(figsize=figsize)
     grid = ImageGrid(
@@ -29,18 +40,17 @@ def plot_grid_ds(ds, model=None, size=(3, 3), figsize=(10, 10)):
         nrows_ncols=size,
         axes_pad=0.3,
     )
-    for X_batch, y_batch in ds_.unbatch().shuffle(n).batch(n).take(1):
-        y_hat_batch = model.predict(X_batch).argmax(axis=-1) if model else y_batch
-        for X, y, y_hat, ax in zip(X_batch, y_batch, y_hat_batch, grid):
-            title = (
-                f"{ds.class_names[y]} (true) - {ds.class_names[y_hat]} (pred)"
-                if model
-                else f"{ds.class_names[y]}"
-            )
-            ax.set_title(title)
-            ax.axes.xaxis.set_visible(False)
-            ax.axes.yaxis.set_visible(False)
-            ax.imshow(X / 255, cmap="gray")
+    y_hat_batch = model.predict(X_batch).argmax(axis=-1) if model else y_batch
+    for X, y, y_hat, ax in zip(X_batch, y_batch, y_hat_batch, grid):
+        title = (
+            f"{class_names[y]} (true) - {class_names[y_hat]} (pred)"
+            if model
+            else f"{class_names[y]}"
+        )
+        ax.set_title(title)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        ax.imshow(X, cmap="gray")
     return grid
 
 
